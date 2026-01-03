@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Chunk, encodeReedSolomon, decodeReedSolomon, simulateChunkLoss } from './reedSolomon';
+import { encodeReedSolomon, decodeReedSolomon, simulateChunkLoss } from './reedSolomon';
 import ChunkVisualization from './components/ChunkVisualization';
 import CoordinatePlane from './components/CoordinatePlane';
 import Controls from './components/Controls';
