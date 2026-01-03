@@ -1,4 +1,3 @@
-import React from 'react';
 import { Chunk } from '../reedSolomon';
 
 interface ChunkVisualizationProps {
@@ -8,7 +7,6 @@ interface ChunkVisualizationProps {
 
 export default function ChunkVisualization({
   chunks,
-  dataChunks,
 }: ChunkVisualizationProps) {
   const dataChunksList = chunks.filter(c => !c.isParity);
   const parityChunksList = chunks.filter(c => c.isParity);

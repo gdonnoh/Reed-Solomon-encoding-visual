@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Chunk } from '../reedSolomon';
 import './CoordinatePlane.css';
 

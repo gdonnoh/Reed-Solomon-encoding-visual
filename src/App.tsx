@@ -10,7 +10,6 @@ function App() {
   const [dataChunks, setDataChunks] = useState(4);
   const [parityChunks, setParityChunks] = useState(2);
   const [lostChunks, setLostChunks] = useState(0);
-  const [chunks, setChunks] = useState<Chunk[]>([]);
 
   // Codifica i dati quando cambiano i parametri
   const encodedChunks = useMemo(() => {
