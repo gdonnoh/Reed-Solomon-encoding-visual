@@ -219,56 +219,67 @@ export function decodeReedSolomon(
     return null; // Non possiamo ricostruire
   }
   
-  // Ricostruzione semplificata usando parità
-  // In un'implementazione reale, si userebbe algebra di Galois per la ricostruzione
-  const reconstructed: string[] = new Array(dataChunks).fill('');
+  // Ricostruzione semplificata: ricostruiamo i chunks di dati mancanti usando la parità
+  // Per ogni chunk di dati mancante, usiamo un chunk di parità per ricostruirlo
+  const reconstructed: string[] = new Array(dataChunks).fill(null);
+  const availableChunks = [...availableDataChunks];
+  const usedParityChunks: Chunk[] = [];
+  
+  // Prima, copia i chunks di dati disponibili
+  availableDataChunks.forEach(chunk => {
+    reconstructed[chunk.id] = chunk.data;
+  });
+  
+  // Calcola la lunghezza massima
   const maxLen = Math.max(
-    ...chunks.filter(c => c.isAvailable).map(c => c.data.length)
+    ...chunks.filter(c => c.isAvailable).map(c => c.data.length),
+    0
   );
   
-  // Per ogni posizione, prova a ricostruire usando XOR
-  for (let pos = 0; pos < maxLen; pos++) {
-    for (let chunkId = 0; chunkId < dataChunks; chunkId++) {
-      const originalChunk = chunks.find(c => c.id === chunkId);
-      
-      if (originalChunk?.isAvailable && pos < originalChunk.data.length) {
-        if (!reconstructed[chunkId]) {
-          reconstructed[chunkId] = originalChunk.data;
+  // Ricostruisci i chunks mancanti uno alla volta usando la parità
+  for (let chunkId = 0; chunkId < dataChunks; chunkId++) {
+    if (reconstructed[chunkId] === null) {
+      // Questo chunk è mancante, proviamo a ricostruirlo
+      if (usedParityChunks.length < availableParityChunks.length) {
+        const parityChunk = availableParityChunks[usedParityChunks.length];
+        let reconstructedData = '';
+        
+        // Ricostruisci byte per byte usando XOR inverso
+        for (let pos = 0; pos < maxLen; pos++) {
+          let reconstructedByte = parityChunk.data.charCodeAt(pos);
+          
+          // Rimuovi il pattern del chunk di parità
+          const parityChunkIndex = parityChunk.id - dataChunks;
+          reconstructedByte ^= (parityChunkIndex + 1) * 0x42;
+          
+          // XOR con tutti gli altri chunks di dati (disponibili o già ricostruiti)
+          for (let otherChunkId = 0; otherChunkId < dataChunks; otherChunkId++) {
+            if (otherChunkId !== chunkId && reconstructed[otherChunkId] !== null) {
+              const otherData = reconstructed[otherChunkId]!;
+              if (pos < otherData.length) {
+                reconstructedByte ^= otherData.charCodeAt(pos);
+              }
+            }
+          }
+          
+          reconstructedData += String.fromCharCode(reconstructedByte);
         }
+        
+        reconstructed[chunkId] = reconstructedData;
+        usedParityChunks.push(parityChunk);
       } else {
-        // Prova a ricostruire usando parità
-        // Questo è semplificato - in realtà serve algebra di Galois
-        let reconstructedByte = 0;
-        let found = false;
-        
-        for (const chunk of chunks.filter(c => c.isAvailable && c.id !== chunkId)) {
-          if (pos < chunk.data.length) {
-            reconstructedByte ^= chunk.data.charCodeAt(pos);
-            found = true;
-          }
-        }
-        
-        if (found && pos < maxLen) {
-          if (!reconstructed[chunkId]) {
-            reconstructed[chunkId] = '';
-          }
-          const current = reconstructed[chunkId];
-          if (pos < current.length) {
-            // Sostituisci il byte
-            reconstructed[chunkId] = 
-              current.slice(0, pos) + 
-              String.fromCharCode(reconstructedByte) + 
-              current.slice(pos + 1);
-          } else {
-            // Aggiungi il byte
-            reconstructed[chunkId] += String.fromCharCode(reconstructedByte);
-          }
-        }
+        // Non abbiamo abbastanza chunks di parità
+        return null;
       }
     }
   }
   
-  return reconstructed.join('');
+  // Unisci tutti i chunks ricostruiti
+  const result = reconstructed
+    .filter(c => c !== null)
+    .join('');
+  
+  return result || null;
 }
 
 /**
